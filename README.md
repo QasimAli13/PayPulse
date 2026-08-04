@@ -121,7 +121,7 @@ Instead of being a simple CRUD application, PayPulse combines secure authenticat
 ```
 PayPulse
 │
-├── client
+├── frontend
 │   ├── public
 │   ├── src
 │   │
@@ -138,7 +138,7 @@ PayPulse
 │   ├── App.css
 │   └── main.js
 │
-├── server
+├── backend
 │   ├── controllers
 │   ├── middleware
 │   ├── models
@@ -255,7 +255,7 @@ cd PayPulse
 ### Install Backend
 
 ```bash
-cd server
+cd backend
 npm install
 npm run dev
 ```
@@ -265,7 +265,7 @@ npm run dev
 Open a new terminal.
 
 ```bash
-cd client
+cd frontend
 npm install
 npm run dev
 ```
