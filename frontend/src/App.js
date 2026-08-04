@@ -11,7 +11,7 @@ import TransactionTable from "./components/TransactionTable";
 import TransferModal from "./components/TransferModal";
 import ProfileSettings from "./components/ProfileSettings";
 
-const API_BASE = "http://localhost:3000/api";
+const API_BASE = "https://paypulse-og6r.onrender.com/api";
 
 function App() {
   const [user, setUser] = useState(null);
