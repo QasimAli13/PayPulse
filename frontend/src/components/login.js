@@ -2,13 +2,12 @@ import { useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import ForgotPasswordModal from "./ForgotPasswordModal";
+import PasswordInput from "./PasswordInput";
 
 function Login({ onLogin }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const [error, setError] = useState("");
-
   const [loading, setLoading] = useState(false);
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
 
@@ -28,20 +27,17 @@ function Login({ onLogin }) {
       );
 
       localStorage.setItem("token", data.token);
-
       toast.success(`Welcome back, ${data.user.fullName}!`);
-
       onLogin(data.user);
     } catch (error) {
       const message = error.response?.data?.message || "Authentication failed";
-
       setError(message);
-
       toast.error(message);
     }
 
     setLoading(false);
   };
+
   return (
     <>
       <form className="auth-form" onSubmit={handleSubmit} autoComplete="on">
@@ -49,23 +45,27 @@ function Login({ onLogin }) {
 
         {error && <p className="error-message">{error}</p>}
 
-        <input
-          className="form-input"
-          type="email"
-          placeholder="Email"
-          autoComplete="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+        <div className="form-group">
+          <label>Email</label>
+          <input
+            className="form-input"
+            type="email"
+            placeholder="Enter email"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
 
-        <input
-          className="form-input"
-          type="password"
-          placeholder="Password"
-          autoComplete="current-password"
+        <PasswordInput
+          label="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          placeholder="Enter password"
+          className="form-input"
         />
+
         <button className="primary-btn" disabled={loading}>
           {loading ? "Logging in..." : "Login"}
         </button>

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
-
+import PasswordInput from "./PasswordInput";
 
 function ProfileSettings({ user }) {
   const [oldPassword, setOldPassword] = useState("");
@@ -53,7 +53,7 @@ function ProfileSettings({ user }) {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       setMessage({
@@ -67,9 +67,7 @@ function ProfileSettings({ user }) {
     } catch (error) {
       setMessage({
         type: "error",
-        text:
-          error.response?.data?.message ||
-          "Failed to update password.",
+        text: error.response?.data?.message || "Failed to update password.",
       });
     }
 
@@ -78,57 +76,37 @@ function ProfileSettings({ user }) {
 
   return (
     <div className="profile-settings">
-
       <div className="profile-header">
         <h2>Account & Security</h2>
       </div>
 
       <div className="profile-cards">
-
         <div className="profile-card">
-          <span className="profile-label">
-            Account Holder
-          </span>
-
-          <p className="profile-value">
-            {user?.fullName || "N/A"}
-          </p>
+          <span className="profile-label">Account Holder</span>
+          <p className="profile-value">{user?.fullName || "N/A"}</p>
         </div>
 
         <div className="profile-card">
-          <span className="profile-label">
-            Email Address
-          </span>
-
-          <p className="profile-value">
-            {user?.email || "N/A"}
-          </p>
+          <span className="profile-label">Email Address</span>
+          <p className="profile-value">{user?.email || "N/A"}</p>
         </div>
 
         <div className="profile-card">
-          <span className="profile-label">
-            Account Number
-          </span>
-
+          <span className="profile-label">Account Number</span>
           <p className="profile-account-number">
             {user?.accountNumber || "N/A"}
           </p>
         </div>
 
         <div className="profile-card">
-          <span className="profile-label">
-            Current Balance
-          </span>
-
+          <span className="profile-label">Current Balance</span>
           <p className="profile-balance">
             ${user?.balance?.toFixed(2) || "0.00"}
           </p>
         </div>
-
       </div>
 
       <div className="password-section">
-
         <h3>Change Password</h3>
 
         {message.text && (
@@ -137,55 +115,30 @@ function ProfileSettings({ user }) {
           </div>
         )}
 
-        <form
-          className="password-form"
-          onSubmit={handlePasswordChange}
-        >
+        <form className="password-form" onSubmit={handlePasswordChange}>
+          <PasswordInput
+            label="Current Password"
+            value={oldPassword}
+            onChange={(e) => setOldPassword(e.target.value)}
+            placeholder="Enter current password"
+            className="profile-input"
+          />
 
-          <div className="input-group">
-            <label>Current Password</label>
+          <PasswordInput
+            label="New Password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="Enter new password"
+            className="profile-input"
+          />
 
-            <input
-              className="profile-input"
-              type="password"
-              placeholder="Enter current password"
-              value={oldPassword}
-              onChange={(e) =>
-                setOldPassword(e.target.value)
-              }
-              required
-            />
-          </div>
-
-          <div className="input-group">
-            <label>New Password</label>
-
-            <input
-              className="profile-input"
-              type="password"
-              placeholder="Enter new password"
-              value={newPassword}
-              onChange={(e) =>
-                setNewPassword(e.target.value)
-              }
-              required
-            />
-          </div>
-
-          <div className="input-group">
-            <label>Confirm New Password</label>
-
-            <input
-              className="profile-input"
-              type="password"
-              placeholder="Confirm new password"
-              value={confirmPassword}
-              onChange={(e) =>
-                setConfirmPassword(e.target.value)
-              }
-              required
-            />
-          </div>
+          <PasswordInput
+            label="Confirm New Password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Confirm new password"
+            className="profile-input"
+          />
 
           <button
             className="update-password-btn"
@@ -194,11 +147,8 @@ function ProfileSettings({ user }) {
           >
             {loading ? "Updating..." : "Update Password"}
           </button>
-
         </form>
-
       </div>
-
     </div>
   );
 }

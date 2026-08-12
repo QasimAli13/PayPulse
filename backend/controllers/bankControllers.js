@@ -1,5 +1,7 @@
 const User = require("../models/user");
 const Transaction = require("../models/transactions");
+
+// 1️⃣ HANDLE TRANSFER (Atomic Updates to prevent race condition & double hashing)
 async function handleTransfer(req, res) {
   try {
     const { receiverAccountNumber, amount } = req.body;
@@ -42,28 +44,32 @@ async function handleTransfer(req, res) {
       });
     }
 
-    sender.balance -= transferAmount;
-    receiver.balance += transferAmount;
+    // 🟢 Atomic Balance Update ($inc) - Pre-save hooks trigger nahi honge
+    const updatedSender = await User.findByIdAndUpdate(
+      sender._id,
+      { $inc: { balance: -transferAmount } },
+      { new: true },
+    );
 
-    await sender.save();
-    await receiver.save();
+    await User.findByIdAndUpdate(receiver._id, {
+      $inc: { balance: transferAmount },
+    });
 
-    const newTransaction = new Transaction({
+    // Create Transaction Record
+    const newTransaction = await Transaction.create({
       sender: sender._id,
       receiver: receiver._id,
       amount: transferAmount,
       description: `Transfer to ${receiver.fullName} (${receiver.accountNumber})`,
     });
 
-    await newTransaction.save();
-
     return res.status(200).json({
       message: "Transfer successful!",
-      updatedBalance: sender.balance,
+      updatedBalance: updatedSender.balance,
       transaction: newTransaction,
     });
   } catch (error) {
-    console.error(error);
+    console.error("❌ TRANSFER ERROR:", error);
 
     return res.status(500).json({
       message: "Server error during transfer",
@@ -71,6 +77,8 @@ async function handleTransfer(req, res) {
     });
   }
 }
+
+// 2️⃣ GET TRANSACTIONS
 async function getTransactions(req, res) {
   try {
     const userId = req.user._id;
@@ -90,8 +98,15 @@ async function getTransactions(req, res) {
     });
   }
 }
+
+// 3️⃣ GET USER DATA
 async function getUserData(req, res) {
-  res.status(200).json(req.user);
+  try {
+    const user = await User.findById(req.user._id).select("-password");
+    res.status(200).json(user);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 }
 
 module.exports = {

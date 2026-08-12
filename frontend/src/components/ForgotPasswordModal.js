@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import PasswordInput from "./PasswordInput"; // 🟢 PasswordInput component import kiya
 
 const ForgotPasswordModal = ({ isOpen, onClose }) => {
   const [step, setStep] = useState(1);
@@ -11,14 +12,15 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
+  // 1️⃣ Send OTP Handler
   const handleSendOtp = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       const res = await axios.post(
-        "https://paypulse-og6r.onrender.com/api/auth/forgot-password",
-        { email }
+        "https://paypulse-og6r.onrender.com/api/auth/forget-password",
+        { email },
       );
 
       toast.success(res.data.message || "OTP sent to your email!");
@@ -30,6 +32,7 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
     }
   };
 
+  // 2️⃣ Reset Password Handler
   const handleResetPassword = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -41,7 +44,7 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
           email,
           otp,
           newPassword,
-        }
+        },
       );
 
       toast.success(res.data.message || "Password reset successful!");
@@ -50,9 +53,7 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
       setOtp("");
       setNewPassword("");
     } catch (err) {
-      toast.error(
-        err.response?.data?.message || "Invalid OTP or expired OTP"
-      );
+      toast.error(err.response?.data?.message || "Invalid OTP or expired OTP");
     } finally {
       setLoading(false);
     }
@@ -67,9 +68,7 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
 
         {step === 1 ? (
           <>
-            <h2 className="forgot-title">
-              Forgot Password
-            </h2>
+            <h2 className="forgot-title">Forgot Password</h2>
 
             <p className="forgot-text">
               Enter your registered email address to receive a 6-digit OTP.
@@ -97,18 +96,13 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
           </>
         ) : (
           <>
-            <h2 className="forgot-title">
-              Verify OTP
-            </h2>
+            <h2 className="forgot-title">Verify OTP</h2>
 
             <p className="forgot-text">
               Enter the OTP sent to <strong>{email}</strong>
             </p>
 
-            <form
-              onSubmit={handleResetPassword}
-              className="forgot-form"
-            >
+            <form onSubmit={handleResetPassword} className="forgot-form">
               <label>OTP Code</label>
 
               <input
@@ -120,24 +114,22 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
                 required
               />
 
-              <label>New Password</label>
-
-              <input
-                type="password"
-                placeholder="Enter new password"
+              {/* 🟢 Replaced standard input with PasswordInput component */}
+              <PasswordInput
+                label="New Password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                required
+                placeholder="Enter new password"
+                className="form-input"
               />
 
               <button
                 type="submit"
                 className="forgot-primary-btn"
                 disabled={loading}
+                style={{ marginTop: "15px" }}
               >
-                {loading
-                  ? "Resetting Password..."
-                  : "Reset Password"}
+                {loading ? "Resetting Password..." : "Reset Password"}
               </button>
             </form>
           </>
