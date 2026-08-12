@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 
+const API_BASE = "https://paypulse-og6r.onrender.com/api/vaults";
+
 const Vaults = ({ onBalanceChange }) => {
   const [vaults, setVaults] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,18 +16,22 @@ const Vaults = ({ onBalanceChange }) => {
   const [lockUntil, setLockUntil] = useState("");
   const [depositAmount, setDepositAmount] = useState("");
 
-  const token = localStorage.getItem("token");
-  const headers = { Authorization: `Bearer ${token}` };
+  // Dynamic Auth Header
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("token");
+    return {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
+  };
 
   const fetchVaults = async () => {
     try {
-      const { data } = await axios.get("https://paypulse-og6r.onrender.com/api/vaults", {
-        headers,
-      });
-
+      const { data } = await axios.get(API_BASE, getAuthHeaders());
       setVaults(data);
     } catch (err) {
-      toast.error("Failed to load vaults");
+      toast.error(err.response?.data?.message || "Failed to load vaults");
     } finally {
       setLoading(false);
     }
@@ -38,18 +44,22 @@ const Vaults = ({ onBalanceChange }) => {
   const handleCreateVault = async (e) => {
     e.preventDefault();
 
+    if (Number(targetAmount) <= 0) {
+      return toast.error("Target amount must be greater than 0");
+    }
+
     try {
       const { data } = await axios.post(
-        "https://paypulse-og6r.onrender.com/api/vaults/create",
+        `${API_BASE}/create`,
         {
           title,
-          targetAmount,
+          targetAmount: Number(targetAmount),
           lockUntil,
         },
-        { headers },
+        getAuthHeaders(),
       );
 
-      toast.success(data.message);
+      toast.success(data.message || "Vault created successfully");
       setShowCreateModal(false);
 
       setTitle("");
@@ -65,17 +75,21 @@ const Vaults = ({ onBalanceChange }) => {
   const handleDeposit = async (e) => {
     e.preventDefault();
 
+    if (Number(depositAmount) <= 0) {
+      return toast.error("Deposit amount must be greater than 0");
+    }
+
     try {
       const { data } = await axios.post(
-        "https://paypulse-og6r.onrender.com/api/vaults/deposit",
+        `${API_BASE}/deposit`,
         {
           vaultId: selectedVault._id,
-          amount: depositAmount,
+          amount: Number(depositAmount),
         },
-        { headers },
+        getAuthHeaders(),
       );
 
-      toast.success(data.message);
+      toast.success(data.message || "Deposit successful");
 
       setShowDepositModal(false);
       setDepositAmount("");
@@ -93,14 +107,14 @@ const Vaults = ({ onBalanceChange }) => {
   const handleWithdraw = async (vault) => {
     try {
       const { data } = await axios.post(
-        "https://paypulse-og6r.onrender.com/api/vaults/withdraw",
+        `${API_BASE}/withdraw`,
         {
           vaultId: vault._id,
         },
-        { headers },
+        getAuthHeaders(),
       );
 
-      toast.success(data.message);
+      toast.success(data.message || "Withdrawal successful");
 
       fetchVaults();
 
@@ -117,7 +131,6 @@ const Vaults = ({ onBalanceChange }) => {
       <div className="vaults-header">
         <div>
           <h2 className="vaults-title">Locked Savings Vaults</h2>
-
           <p className="vaults-subtitle">
             Save towards your goals with locked withdrawal security.
           </p>
@@ -138,16 +151,17 @@ const Vaults = ({ onBalanceChange }) => {
       ) : vaults.length === 0 ? (
         <div className="vault-empty">
           <div className="vault-empty-icon">🔒</div>
-
           <h3>No Savings Goals Yet</h3>
-
           <p>Create your first vault and start saving towards a goal.</p>
         </div>
       ) : (
         <div className="vaults-grid">
           {vaults.map((vault) => {
+            const target = vault.targetAmount || 1;
+            const saved = vault.savedAmount || 0;
+
             const percentage = Math.min(
-              Math.round((vault.savedAmount / vault.targetAmount) * 100),
+              Math.round((saved / target) * 100),
               100,
             );
 
@@ -158,7 +172,6 @@ const Vaults = ({ onBalanceChange }) => {
               <div className="vault-card" key={vault._id}>
                 <div className="vault-card-header">
                   <h3>{vault.title}</h3>
-
                   <span
                     className={
                       isLocked ? "vault-status locked" : "vault-status unlocked"
@@ -185,10 +198,9 @@ const Vaults = ({ onBalanceChange }) => {
                 </div>
 
                 <div className="vault-amounts">
-                  <span className="vault-saved">${vault.savedAmount}</span>
-
+                  <span className="vault-saved">${saved}</span>
                   <span className="vault-target">
-                    Goal: ${vault.targetAmount} ({percentage}%)
+                    Goal: ${target} ({percentage}%)
                   </span>
                 </div>
 
@@ -206,7 +218,7 @@ const Vaults = ({ onBalanceChange }) => {
                   <button
                     className="vault-withdraw-btn"
                     onClick={() => handleWithdraw(vault)}
-                    disabled={isLocked || vault.savedAmount === 0}
+                    disabled={isLocked || saved === 0}
                   >
                     Withdraw
                   </button>
@@ -229,16 +241,13 @@ const Vaults = ({ onBalanceChange }) => {
             </button>
 
             <div className="vault-modal-icon">🎯</div>
-
             <h2>Create Savings Goal</h2>
-
             <p className="vault-modal-description">
               Set a target and lock your savings until your goal date.
             </p>
 
             <form onSubmit={handleCreateVault} className="vault-form">
               <label>Goal Title</label>
-
               <input
                 type="text"
                 placeholder="e.g. New Laptop"
@@ -248,17 +257,16 @@ const Vaults = ({ onBalanceChange }) => {
               />
 
               <label>Target Amount ($)</label>
-
               <input
                 type="number"
                 placeholder="500"
+                min="1"
                 value={targetAmount}
                 onChange={(e) => setTargetAmount(e.target.value)}
                 required
               />
 
               <label>Lock Savings Until</label>
-
               <input
                 type="date"
                 value={lockUntil}
@@ -286,19 +294,17 @@ const Vaults = ({ onBalanceChange }) => {
             </button>
 
             <div className="vault-modal-icon">💰</div>
-
             <h2>Deposit to {selectedVault.title}</h2>
-
             <p className="vault-modal-description">
               Transfer money from your main balance into this savings vault.
             </p>
 
             <form onSubmit={handleDeposit} className="vault-form">
               <label>Amount to Transfer from Main Balance ($)</label>
-
               <input
                 type="number"
                 placeholder="100"
+                min="1"
                 value={depositAmount}
                 onChange={(e) => setDepositAmount(e.target.value)}
                 required
