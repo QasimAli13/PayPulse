@@ -1,6 +1,6 @@
-const { Resend } = require("resend");
+const nodemailer = require("nodemailer");
 
-const sendEmail = async (email, token) => {
+const sendEmail = async (email, token, template) => {
   const resend = new Resend(process.env.RESEND_API_KEY);
 
   try {
@@ -8,7 +8,7 @@ const sendEmail = async (email, token) => {
       from: "PayPulse <no-reply@waleedimran.me>",
       to: email,
       subject: "Verify your email",
-      html: `<p>Your verification token is: <strong>${token}</strong></p>`,
+      html: `${template}`,
     });
 
     console.log("Email Sent Successfully:", data);
