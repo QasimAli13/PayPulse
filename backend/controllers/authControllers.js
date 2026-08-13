@@ -25,7 +25,6 @@ async function registerUser(req, res) {
       100000 + Math.random() * 900000,
     ).toString();
 
-    // Plain password create karein, pre-save hook 1st time hash karega
     const newUser = await User.create({
       fullName,
       email,
@@ -34,25 +33,9 @@ async function registerUser(req, res) {
       verificationToken: verificationCode,
     });
 
-    const emailTemplate = `
-      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 25px; border: 1px solid #e7dcc9; border-radius: 12px; background-color: #ffffff;">
-        <h2 style="color: #8b6b4a; text-align: center;">Welcome to PayPulse!</h2>
-        <p style="color: #334155;">Hi ${fullName},</p>
-        <p style="color: #475569;">Use the verification code below to activate your account:</p>
-        <div style="text-align: center; margin: 30px 0;">
-          <div style="display: inline-block; background: #f6efe4; border: 2px dashed #b08968; color: #5c4430; padding: 14px 32px; font-size: 32px; font-weight: bold; letter-spacing: 8px; border-radius: 10px;">
-            ${verificationCode}
-          </div>
-        </div>
-      </div>
-    `;
-
+    // Directly calling sendEmail with exact 2 parameters (email, token)
     try {
-      await sendEmail({
-        email: newUser.email,
-        subject: "PayPulse - Account Verification Code",
-        html: emailTemplate,
-      });
+      await sendEmail(newUser.email, verificationCode);
     } catch (emailErr) {
       await User.findByIdAndDelete(newUser._id);
       return res.status(500).json({
@@ -70,7 +53,7 @@ async function registerUser(req, res) {
   }
 }
 
-// 2️⃣ VERIFY CODE (WITHOUT TRIGGERING PRE-SAVE HOOK)
+// 2️⃣ VERIFY EMAIL CODE
 async function verifyEmail(req, res) {
   try {
     const { email, code } = req.body;
@@ -89,7 +72,6 @@ async function verifyEmail(req, res) {
         .json({ message: "Ghalat ya expired verification code." });
     }
 
-    // Direct Update karein taake pre-save hook re-trigger na ho
     await User.findByIdAndUpdate(user._id, {
       isVerified: true,
       $unset: { verificationToken: 1 },
@@ -132,7 +114,9 @@ async function loginUser(req, res) {
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
-} // 4️⃣ FORGOT PASSWORD CONTROLLER
+}
+
+// 4️⃣ FORGOT PASSWORD
 async function forgetPassword(req, res) {
   const { email } = req.body;
 
@@ -148,47 +132,19 @@ async function forgetPassword(req, res) {
         .json({ message: "No account found with this email." });
     }
 
-    // 6-Digit Reset OTP Generate
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Direct Database Update without password re-hashing
     await User.findByIdAndUpdate(user._id, {
       resetOtp: otp,
-      resetOtpExpire: Date.now() + 10 * 60 * 1000, // 10 minutes
+      resetOtpExpire: Date.now() + 10 * 60 * 1000,
     });
 
-    const emailTemplate = `
-      <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; background: #fffdf8; border: 1px solid #e7dcc9; border-radius: 14px; overflow: hidden;">
-        <div style="background: #8b6b4a; padding: 20px; text-align: center;">
-          <h2 style="color: #ffffff; margin: 0;">PayPulse</h2>
-          <p style="color: #f8f3ea; margin-top: 8px; font-size: 14px;">Password Reset Verification</p>
-        </div>
-        <div style="padding: 30px;">
-          <p style="font-size: 16px; color: #4b3f35;">Hello,</p>
-          <p style="font-size: 15px; color: #6b5b4d; line-height: 1.7;">
-            Use the OTP below to reset your PayPulse account password:
-          </p>
-          <div style="margin: 30px 0; text-align: center;">
-            <div style="display: inline-block; background: #f6efe4; border: 2px dashed #b08968; color: #5c4430; padding: 16px 32px; font-size: 32px; font-weight: bold; letter-spacing: 8px; border-radius: 10px;">
-              ${otp}
-            </div>
-          </div>
-          <p style="font-size: 14px; color: #7a6a5b;">This OTP will expire in <strong>10 minutes</strong>.</p>
-        </div>
-      </div>
-    `;
-
-    // Send Email
     try {
-      await sendEmail({
-        email: user.email,
-        subject: "PayPulse - Password Reset OTP",
-        html: emailTemplate,
-      });
+      await sendEmail(user.email, otp);
     } catch (emailErr) {
       console.error("❌ RESET OTP EMAIL ERROR:", emailErr);
       return res.status(500).json({
-        message: "Failed to send email. Check SMTP/Nodemailer settings.",
+        message: "Failed to send email.",
         error: emailErr.message,
       });
     }

@@ -161,7 +161,6 @@ function App() {
               }}
             />
 
-            {/* 📲 Quick QR Code Trigger */}
             <div style={{ margin: "15px 0", textAlign: "right" }}>
               <button
                 onClick={() => setShowQrModal(true)}
