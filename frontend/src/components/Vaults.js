@@ -25,21 +25,21 @@ const Vaults = ({ onBalanceChange }) => {
       },
     };
   };
-
   const fetchVaults = async () => {
     try {
       const { data } = await axios.get(API_BASE, getAuthHeaders());
       setVaults(data);
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to load vaults");
+      if (err.response?.status === 401) {
+        toast.error("Session expired. Please login again.");
+        // Option: navigate("/login");
+      } else {
+        toast.error(err.response?.data?.message || "Failed to load vaults");
+      }
     } finally {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchVaults();
-  }, []);
 
   const handleCreateVault = async (e) => {
     e.preventDefault();
@@ -269,6 +269,7 @@ const Vaults = ({ onBalanceChange }) => {
               <label>Lock Savings Until</label>
               <input
                 type="date"
+                min={new Date().toISOString().split("T")[0]}
                 value={lockUntil}
                 onChange={(e) => setLockUntil(e.target.value)}
                 required
