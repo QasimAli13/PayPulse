@@ -1,3 +1,4 @@
+// App.js
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Toaster, toast } from "react-hot-toast";
@@ -12,35 +13,29 @@ import TransferModal from "./components/TransferModal";
 import ProfileSettings from "./components/ProfileSettings";
 import Vaults from "./components/Vaults";
 import QRCodeModal from "./components/QRCodeModal";
+import FloatingDock from "./components/FloatingDock";
 
 const API_BASE = "https://paypulse-og6r.onrender.com/api";
 
 function App() {
   const [user, setUser] = useState(null);
   const [transactions, setTransactions] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [showLogin, setShowLogin] = useState(true);
-  const [activePage, setActivePage] = useState("dashboard");
-
-  const [showQrModal, setShowQrModal] = useState(false);
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [initialAccount, setInitialAccount] = useState("");
+  const [showQrModal, setShowQrModal] = useState(false);
 
-  const getConfig = () => {
-    const token = localStorage.getItem("token");
-
-    return {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    };
-  };
+  const getConfig = () => ({
+    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+  });
 
   const fetchUserData = async () => {
     try {
       const res = await axios.get(`${API_BASE}/bank/user-data`, getConfig());
       setUser(res.data);
     } catch (error) {
-      console.log(error);
+      console.error("Fetch user error:", error);
       localStorage.removeItem("token");
       setUser(null);
     }
@@ -51,7 +46,7 @@ function App() {
       const res = await axios.get(`${API_BASE}/bank/transactions`, getConfig());
       setTransactions(res.data);
     } catch (error) {
-      console.log(error);
+      console.error("Fetch transactions error:", error);
     }
   };
 
@@ -59,27 +54,19 @@ function App() {
     try {
       await axios.post(
         `${API_BASE}/bank/transfer`,
-        {
-          receiverAccountNumber,
-          amount: Number(amount),
-        },
+        { receiverAccountNumber, amount: Number(amount) },
         getConfig(),
       );
 
-      await fetchUserData();
-      await fetchTransactions();
-
+      await Promise.all([fetchUserData(), fetchTransactions()]);
       toast.success(
-        `Successfully sent $${amount} to ${receiverAccountNumber}!`,
+        `✅ Successfully sent $${amount} to ${receiverAccountNumber}!`,
       );
-
       return true;
     } catch (error) {
       const message = error.response?.data?.message || "Transfer failed";
-
       setError(message);
-      toast.error(message);
-
+      toast.error(`❌ ${message}`);
       return false;
     }
   };
@@ -88,24 +75,24 @@ function App() {
     localStorage.removeItem("token");
     setUser(null);
     setTransactions([]);
+    toast.success("👋 Logged out successfully");
+  };
+
+  const handleQrScanned = (scannedAccountNumber) => {
+    setInitialAccount(scannedAccountNumber);
+    setShowQrModal(false);
+    setIsModalOpen(true);
   };
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-
     if (token) {
       fetchUserData();
       fetchTransactions();
     }
   }, []);
 
-  // Handle QR Scan Completion
-  const handleQrScanned = (scannedAccountNumber) => {
-    setInitialAccount(scannedAccountNumber);
-    setShowQrModal(false);
-    setIsModalOpen(true); // Open transfer modal directly
-  };
-
+  // Auth Screen
   if (!user) {
     return (
       <div className="auth-container">
@@ -135,7 +122,6 @@ function App() {
             </>
           )}
         </div>
-
         <Toaster position="top-right" reverseOrder={false} />
       </div>
     );
@@ -143,63 +129,59 @@ function App() {
 
   return (
     <div className="app-container">
-      <Navbar
-        user={user}
-        onLogout={handleLogout}
-        activePage={activePage}
-        setActivePage={setActivePage}
-      />
+      <Navbar user={user} onLogout={handleLogout} />
 
       <main className="main-content">
-        {activePage === "dashboard" && (
-          <>
-            <AccountSummary
-              user={user}
-              onOpenModal={() => {
-                setInitialAccount("");
-                setIsModalOpen(true);
-              }}
-            />
-
-            <div style={{ margin: "15px 0", textAlign: "right" }}>
-              <button
-                onClick={() => setShowQrModal(true)}
-                className="forgot-primary-btn"
-                style={{ width: "auto", padding: "10px 20px" }}
-              >
-                Show / Scan QR Code
-              </button>
-            </div>
-
-            <TransactionTable
-              transactions={transactions}
-              currentUserId={user._id}
-              user={user}
-            />
-
-            <Vaults onBalanceChange={fetchUserData} />
-          </>
+        {/* Dashboard */}
+        {activeTab === "dashboard" && (
+          <AccountSummary
+            user={user}
+            onOpenModal={() => {
+              setInitialAccount("");
+              setIsModalOpen(true);
+            }}
+            transactions={transactions || []}
+          />
         )}
 
-        {activePage === "settings" && <ProfileSettings user={user} />}
+        {/* Transfers */}
+        {activeTab === "transfers" && (
+          <TransferModal
+            isOpen={true}
+            onClose={() => setActiveTab("dashboard")}
+            onTransfer={handleTransfer}
+            user={user}
+          />
+        )}
 
-        {/* Transfer Modal */}
-        <TransferModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onTransfer={handleTransfer}
-          initialAccountNumber={initialAccount}
-        />
+        {/* Transactions */}
+        {activeTab === "transactions" && (
+          <TransactionTable
+            transactions={transactions}
+            currentUserId={user._id}
+            user={user}
+          />
+        )}
 
-        <QRCodeModal
-          isOpen={showQrModal}
-          onClose={() => setShowQrModal(false)}
-          user={user}
-          onScanSuccess={handleQrScanned}
-        />
+        {/* QR */}
+        {activeTab === "qr" && (
+          <QRCodeModal
+            isOpen={true}
+            onClose={() => setActiveTab("dashboard")}
+            user={user}
+            onScanSuccess={handleQrScanned}
+          />
+        )}
 
-        <Toaster position="top-right" reverseOrder={false} />
+        {/* Vaults */}
+        {activeTab === "vaults" && <Vaults onBalanceChange={fetchUserData} />}
+
+        {/* Settings */}
+        {activeTab === "settings" && <ProfileSettings user={user} />}
       </main>
+
+      <FloatingDock activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Toaster position="top-right" reverseOrder={false} />
     </div>
   );
 }

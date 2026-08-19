@@ -1,25 +1,21 @@
+// components/TransferModal.jsx
 import { useState } from "react";
 
-
-function TransferModal({ isOpen, onClose, onTransfer }) {
+function TransferModal({ isOpen, onClose, onTransfer, user }) {
   const [receiverAccountNumber, setReceiverAccountNumber] = useState("");
   const [amount, setAmount] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  if (!isOpen) {
-    return null;
-  }
+  if (!isOpen) return null;
 
-  // Handler to auto-fill system test account
   const handleUseTestAccount = () => {
     setReceiverAccountNumber("PAYP-TEST-9999");
-    setError(""); // Clear error on selecting test account
+    setError("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     setLoading(true);
     setError("");
 
@@ -28,70 +24,76 @@ function TransferModal({ isOpen, onClose, onTransfer }) {
     if (success) {
       setReceiverAccountNumber("");
       setAmount("");
-      onClose();
+      setTimeout(() => onClose(), 1500);
     }
 
     setLoading(false);
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="transfer-modal">
-        <h2>Send Money</h2>
+    <div className="page-transfers">
+      <div className="page-header">
+        <h2>💸 Send Money</h2>
+        <p>Transfer funds to any PayPulse account</p>
+      </div>
 
+      <div className="transfer-balance-card">
+        <span>Available Balance</span>
+        <h3>${user?.balance?.toFixed(2)}</h3>
+      </div>
 
+      <form className="transfer-form" onSubmit={handleSubmit}>
         <div className="test-account-box">
-          <div className="test-account-info">
-            <p className="test-account-title">Testing Solo?</p>
-            <p className="test-account-sub">Use default system test vault</p>
+          <div>
+            <p className="test-account-title">🧪 Testing Solo?</p>
+            <p className="test-account-sub">Use default system test account</p>
           </div>
           <button
             type="button"
             className="test-account-btn"
             onClick={handleUseTestAccount}
           >
-            Fill Test A/C
+            Fill Test
           </button>
         </div>
 
-        {error && <div className="modal-error">{error}</div>}
+        {error && <div className="transfer-error">{error}</div>}
 
-        <form onSubmit={handleSubmit}>
+        <div className="form-group">
+          <label>Receiver Account Number</label>
           <input
-            className="modal-input"
             type="text"
-            placeholder="Receiver Account Number"
+            placeholder="Enter account number"
             value={receiverAccountNumber}
             onChange={(e) => setReceiverAccountNumber(e.target.value)}
+            required
+            className="form-input"
           />
+        </div>
 
+        <div className="form-group">
+          <label>Amount ($)</label>
           <input
-            className="modal-input"
             type="number"
             min="1"
-            placeholder="Amount"
+            step="0.01"
+            placeholder="Enter amount"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
+            required
+            className="form-input"
           />
+        </div>
 
-          <div className="modal-buttons">
-            <button className="close-btn" type="button" onClick={onClose}>
-              Close
-            </button>
-
-            <button className="transfer-btn" type="submit" disabled={loading}>
-              {loading ? (
-                <>
-                  <span className="spinner"></span>
-                  Sending...
-                </>
-              ) : (
-                "Transfer"
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
+        <div className="modal-buttons">
+          <button type="button" className="close-btn" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" className="transfer-btn" disabled={loading}>
+            {loading ? "Processing..." : "Send Money"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

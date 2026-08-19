@@ -1,3 +1,4 @@
+// components/ProfileSettings.jsx
 import React, { useState } from "react";
 import axios from "axios";
 import PasswordInput from "./PasswordInput";
@@ -6,21 +7,12 @@ function ProfileSettings({ user }) {
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
-  const [message, setMessage] = useState({
-    type: "",
-    text: "",
-  });
-
+  const [message, setMessage] = useState({ type: "", text: "" });
   const [loading, setLoading] = useState(false);
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
-
-    setMessage({
-      type: "",
-      text: "",
-    });
+    setMessage({ type: "", text: "" });
 
     if (newPassword !== confirmPassword) {
       setMessage({
@@ -42,25 +34,13 @@ function ProfileSettings({ user }) {
 
     try {
       const token = localStorage.getItem("token");
-
       const { data } = await axios.put(
         "https://paypulse-og6r.onrender.com/api/auth/change-password",
-        {
-          oldPassword,
-          newPassword,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
+        { oldPassword, newPassword },
+        { headers: { Authorization: `Bearer ${token}` } },
       );
 
-      setMessage({
-        type: "success",
-        text: data.message,
-      });
-
+      setMessage({ type: "success", text: data.message });
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");

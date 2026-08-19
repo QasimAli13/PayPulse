@@ -16,7 +16,6 @@ const Vaults = ({ onBalanceChange }) => {
   const [lockUntil, setLockUntil] = useState("");
   const [depositAmount, setDepositAmount] = useState("");
 
-  // Dynamic Auth Header
   const getAuthHeaders = () => {
     const token = localStorage.getItem("token");
     return {
@@ -25,6 +24,7 @@ const Vaults = ({ onBalanceChange }) => {
       },
     };
   };
+
   const fetchVaults = async () => {
     try {
       const { data } = await axios.get(API_BASE, getAuthHeaders());
@@ -32,7 +32,6 @@ const Vaults = ({ onBalanceChange }) => {
     } catch (err) {
       if (err.response?.status === 401) {
         toast.error("Session expired. Please login again.");
-        // Option: navigate("/login");
       } else {
         toast.error(err.response?.data?.message || "Failed to load vaults");
       }
@@ -40,6 +39,10 @@ const Vaults = ({ onBalanceChange }) => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchVaults();
+  }, []);
 
   const handleCreateVault = async (e) => {
     e.preventDefault();
@@ -90,7 +93,6 @@ const Vaults = ({ onBalanceChange }) => {
       );
 
       toast.success(data.message || "Deposit successful");
-
       setShowDepositModal(false);
       setDepositAmount("");
 
@@ -115,7 +117,6 @@ const Vaults = ({ onBalanceChange }) => {
       );
 
       toast.success(data.message || "Withdrawal successful");
-
       fetchVaults();
 
       if (onBalanceChange) {
@@ -127,12 +128,12 @@ const Vaults = ({ onBalanceChange }) => {
   };
 
   return (
-    <div className="vaults-container">
+    <div className="vaults-container" style={{ marginTop: 0 }}>
       <div className="vaults-header">
         <div>
-          <h2 className="vaults-title">Locked Savings Vaults</h2>
+          <h2 className="vaults-title">Smart Savings Vaults</h2>
           <p className="vaults-subtitle">
-            Save towards your goals with locked withdrawal security.
+            Lock funds toward specific financial targets.
           </p>
         </div>
 
@@ -140,53 +141,53 @@ const Vaults = ({ onBalanceChange }) => {
           className="vault-create-btn"
           onClick={() => setShowCreateModal(true)}
         >
-          + New Goal Vault
+          + New Vault
         </button>
       </div>
 
       {loading ? (
         <div className="vault-loading">
-          <p>Loading your goals...</p>
+          <p>Syncing savings goals...</p>
         </div>
       ) : vaults.length === 0 ? (
         <div className="vault-empty">
-          <div className="vault-empty-icon">🔒</div>
-          <h3>No Savings Goals Yet</h3>
-          <p>Create your first vault and start saving towards a goal.</p>
+          <div className="vault-empty-icon">🛡️</div>
+          <h3>No Active Vaults</h3>
+          <p>Create a locked goal vault to earn discipline on your spending.</p>
         </div>
       ) : (
         <div className="vaults-grid">
           {vaults.map((vault) => {
             const target = vault.targetAmount || 1;
             const saved = vault.savedAmount || 0;
-
             const percentage = Math.min(
               Math.round((saved / target) * 100),
               100,
             );
-
             const isLocked =
               new Date() < new Date(vault.lockUntil) && !vault.isCompleted;
 
             return (
               <div className="vault-card" key={vault._id}>
                 <div className="vault-card-header">
-                  <h3>{vault.title}</h3>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    <span style={{ fontSize: "16px" }}>🎯</span>
+                    <h3>{vault.title}</h3>
+                  </div>
                   <span
                     className={
                       isLocked ? "vault-status locked" : "vault-status unlocked"
                     }
                   >
-                    {isLocked ? "🔒 Locked" : "🔓 Unlocked"}
+                    {isLocked ? "🔒 Locked" : "🔓 Available"}
                   </span>
                 </div>
-
-                <p className="vault-lock-date">
-                  Locked until:{" "}
-                  <strong>
-                    {new Date(vault.lockUntil).toLocaleDateString()}
-                  </strong>
-                </p>
 
                 <div className="vault-progress">
                   <div
@@ -198,11 +199,42 @@ const Vaults = ({ onBalanceChange }) => {
                 </div>
 
                 <div className="vault-amounts">
-                  <span className="vault-saved">${saved}</span>
+                  <div>
+                    <span className="vault-saved">
+                      $
+                      {Number(saved).toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                      })}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        color: "var(--text-muted)",
+                        marginLeft: "4px",
+                      }}
+                    >
+                      saved
+                    </span>
+                  </div>
                   <span className="vault-target">
-                    Goal: ${target} ({percentage}%)
+                    Goal: $
+                    {Number(target).toLocaleString("en-US", {
+                      minimumFractionDigits: 0,
+                    })}{" "}
+                    ({percentage}%)
                   </span>
                 </div>
+
+                <p className="vault-lock-date" style={{ margin: "4px 0 14px" }}>
+                  Matures on:{" "}
+                  <strong>
+                    {new Date(vault.lockUntil).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </strong>
+                </p>
 
                 <div className="vault-actions">
                   <button
@@ -212,13 +244,18 @@ const Vaults = ({ onBalanceChange }) => {
                       setShowDepositModal(true);
                     }}
                   >
-                    + Add Money
+                    + Add Funds
                   </button>
 
                   <button
                     className="vault-withdraw-btn"
                     onClick={() => handleWithdraw(vault)}
                     disabled={isLocked || saved === 0}
+                    title={
+                      isLocked
+                        ? "Funds are locked until maturity date"
+                        : "Withdraw to main balance"
+                    }
                   >
                     Withdraw
                   </button>
@@ -229,7 +266,7 @@ const Vaults = ({ onBalanceChange }) => {
         </div>
       )}
 
-      {/* Create Vault Modal */}
+      {/* ===== CREATE VAULT MODAL ===== */}
       {showCreateModal && (
         <div className="vault-modal-overlay">
           <div className="vault-modal">
@@ -243,14 +280,14 @@ const Vaults = ({ onBalanceChange }) => {
             <div className="vault-modal-icon">🎯</div>
             <h2>Create Savings Goal</h2>
             <p className="vault-modal-description">
-              Set a target and lock your savings until your goal date.
+              Set your target amount and lock funds until your target date.
             </p>
 
             <form onSubmit={handleCreateVault} className="vault-form">
               <label>Goal Title</label>
               <input
                 type="text"
-                placeholder="e.g. New Laptop"
+                placeholder="e.g. Emergency Fund, Laptop, Travel"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
@@ -259,14 +296,14 @@ const Vaults = ({ onBalanceChange }) => {
               <label>Target Amount ($)</label>
               <input
                 type="number"
-                placeholder="500"
+                placeholder="1000"
                 min="1"
                 value={targetAmount}
                 onChange={(e) => setTargetAmount(e.target.value)}
                 required
               />
 
-              <label>Lock Savings Until</label>
+              <label>Lock Funds Until</label>
               <input
                 type="date"
                 min={new Date().toISOString().split("T")[0]}
@@ -276,14 +313,14 @@ const Vaults = ({ onBalanceChange }) => {
               />
 
               <button type="submit" className="vault-modal-primary-btn">
-                Start Vault
+                Initialize Vault
               </button>
             </form>
           </div>
         </div>
       )}
 
-      {/* Deposit Modal */}
+      {/* ===== DEPOSIT MODAL ===== */}
       {showDepositModal && selectedVault && (
         <div className="vault-modal-overlay">
           <div className="vault-modal">
@@ -297,11 +334,11 @@ const Vaults = ({ onBalanceChange }) => {
             <div className="vault-modal-icon">💰</div>
             <h2>Deposit to {selectedVault.title}</h2>
             <p className="vault-modal-description">
-              Transfer money from your main balance into this savings vault.
+              Transfer funds from your main balance into this locked goal.
             </p>
 
             <form onSubmit={handleDeposit} className="vault-form">
-              <label>Amount to Transfer from Main Balance ($)</label>
+              <label>Amount ($)</label>
               <input
                 type="number"
                 placeholder="100"
@@ -312,7 +349,7 @@ const Vaults = ({ onBalanceChange }) => {
               />
 
               <button type="submit" className="vault-modal-primary-btn">
-                Confirm Transfer
+                Confirm Deposit
               </button>
             </form>
           </div>
